@@ -1,3 +1,23 @@
+# reserved_instance_report.py
+#
+# This lambda script has the following configuration:
+# * Run with a IAM role that has the following permissions
+#   * Describe all Reserved Instances in all regions specified
+#   * Send email using SES
+# * Scheduled to run periodically
+# * Timeout should be increased to 30s (its time to run is dependent on number of reserved instances)
+# * 
+#
+# Customisation
+# * regions - remove any regions you don't required
+# * tags_of_interest - any tags that you would like to appear in the report
+# * red_warning_days - days left to trigger red warning (default 30)
+# * orange_warning_days - days left to trigger orange warning (default 60)
+# * report_title - report title
+# * subject_string - email subject
+# * from_address - address from which report is sent
+# * to_address - address to which report is sent
+
 import json
 import boto3
 import smtplib
@@ -28,16 +48,18 @@ def lambda_handler(event, context):
     print("Received event: " + json.dumps(event, indent=2))
     
     #Customisations for report Scope
-    regions = ['us-east-1','us-west-1','us-west-2','eu-central-1']
+    regions = ['us-east-1', 'us-west-2', 'us-west-1', 
+               'eu-west-1', 'eu-central-1', 'ap-southeast-1', 
+               'ap-southeast-2', 'ap-northeast-1', 'sa-east-1']
     tags_of_interest = ['product', 'app', 'env', 'role']
     red_warning_days = 30
-    orange_warning_days = 180
+    orange_warning_days = 60
     
     #Configuration for report sending
     report_title = "Reserved Instance Expiry"
     subject_string = "lambda report - %s" % report_title
-    from_address = 'lambda_reporting@4a42.org'
-    to_address = 'report_recipient@4a42.org'
+    from_address = 'lambda_reporting@example.com'
+    to_address = 'report_recipient@example.com'
     
     
     #Headers for full report table
