@@ -1,5 +1,7 @@
 # reserved_instance_report.py
 #
+# jbeard 2015
+#
 # This lambda script has the following configuration:
 # * Run with a IAM role that has the following permissions
 #   * Describe all Reserved Instances in all regions specified
@@ -43,9 +45,6 @@ def list_to_html_table(list):
     return html
  
 def lambda_handler(event, context):
-
-    
-    print("Received event: " + json.dumps(event, indent=2))
     
     #Customisations for report Scope
     regions = ['us-east-1', 'us-west-2', 'us-west-1', 
@@ -59,11 +58,12 @@ def lambda_handler(event, context):
     report_title = "Reserved Instance Expiry"
     subject_string = "lambda report - %s" % report_title
     from_address = 'lambda_reporting@example.com'
-    to_address = 'report_recipient@example.com'
+    to_address = 'devops@example.com'
     
     
     #Headers for full report table
     report_list = [['id', 'AZ', 'Type', 'Count', 'Length (years)', 'Time Left',]+tags_of_interest ]
+    expired_warning_reservations = []
     red_warning_reservations = []
     orange_warning_reservations = []
             
@@ -74,7 +74,11 @@ def lambda_handler(event, context):
         for ri in response['ReservedInstances']:
             time_left = ri[u'End'] - datetime.datetime.now(tzlocal())
             
-            if time_left < datetime.timedelta(days=red_warning_days):
+            if time_left < datetime.timedelta(days=-10):
+                pass
+            elif time_left < datetime.timedelta(days=0):
+                expired_warning_reservations.append([ri[u'ReservedInstancesId'], ri[u'AvailabilityZone'],  time_left])
+            elif time_left < datetime.timedelta(days=red_warning_days):
                 red_warning_reservations.append([ri[u'ReservedInstancesId'], ri[u'AvailabilityZone'],  time_left])
             elif time_left < datetime.timedelta(days=orange_warning_days):
                 orange_warning_reservations.append([ri[u'ReservedInstancesId'], ri[u'AvailabilityZone'], time_left])
@@ -96,7 +100,8 @@ def lambda_handler(event, context):
             for tag in tags_of_interest:
                 row.append(tags.get(tag,'-'))
             
-            report_list.append( row )
+            if time_left > datetime.timedelta(days=-10):
+                report_list.append( row )
      
     #Created text version
     msg = "%s\n" % report_title
@@ -104,6 +109,7 @@ def lambda_handler(event, context):
     
     #Create HTML Version
     html_msg = '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional = //EN"><html> <head><style type="text/css"> H2 { color:#FF0000; } H3 { color:#FFA500; } </style></head><body><h1>Global Reserved Instance Report</h1>'
+
     
     if len(red_warning_reservations):
         html_msg+="<h2>Warning the following will expire within %s days!</h2>" % red_warning_days
@@ -112,13 +118,17 @@ def lambda_handler(event, context):
     if len(orange_warning_reservations):
         html_msg+="<h3>Warning the following will expire within %s days!</h3>" % orange_warning_days
         for row in orange_warning_reservations:
-            html_msg += "<h4>Warning %s (%s) expires in less than 30 days (%s)</h4>" % (row[0], row[1], row[2])
+            html_msg += "<p>Warning %s (%s) expires in less than 30 days (%s)</p>" % (row[0], row[1], row[2])
+    if len(expired_warning_reservations):
+        html_msg+="<h3>The following have expired in the last 10 days.</h3>"
+        for row in expired_warning_reservations:
+            html_msg += "<p>Warning %s (%s) expires in less than 30 days (%s)</p>" % (row[0], row[1], row[2])    
             
     html_msg += "<h4>All Reservations</h4>"
     html_msg += list_to_html_table(report_list)
     html_msg += '</body></html>'
     
-    ses = boto3.client('ses')
+    ses = boto3.client('ses', region_name='us-east-1')
     ses.send_email( Source= from_address,
                     Destination={
                         'ToAddresses': [ to_address, ],
