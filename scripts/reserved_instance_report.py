@@ -94,7 +94,6 @@ def lambda_handler(event, context):
                     ]
             
             for tag in tags_of_interest:
-                print "Looking for ", tag
                 row.append(tags.get(tag,'-'))
             
             report_list.append( row )
