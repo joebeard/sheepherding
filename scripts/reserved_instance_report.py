@@ -63,14 +63,14 @@ def lambda_handler(event, context):
                'ap-southeast-2', 'ap-northeast-1', 'sa-east-1']
     tags_of_interest = ['product', 'app', 'env', 'role']
     red_warning_days = 30
-    orange_warning_days = 60
+    orange_warning_days = 180
     
     #Configuration for report sending
     report_title = "Reserved Instance Expiry"
     subject_string = "lambda report - %s" % report_title
     from_address = 'lambda_reporting@example.com'
     to_address = 'devops@example.com'
-    
+    ses_region = 'eu-west-1'
     
     #Headers for full report table
     report_list = [['id', 'AZ', 'Type', 'Count', 'Length (years)', 'Time Left',]+tags_of_interest ]
@@ -139,7 +139,7 @@ def lambda_handler(event, context):
     html_msg += list_to_html_table(report_list)
     html_msg += '</body></html>'
     
-    ses = boto3.client('ses', region_name='us-east-1')
+    ses = boto3.client('ses', region_name=ses_region)
     ses.send_email( Source= from_address,
                     Destination={
                         'ToAddresses': [ to_address, ],
