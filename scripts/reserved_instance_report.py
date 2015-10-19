@@ -125,15 +125,15 @@ def lambda_handler(event, context):
     if len(red_warning_reservations):
         html_msg+="<h2>Warning the following will expire within %s days!</h2>" % red_warning_days
         for row in red_warning_reservations:
-            html_msg += "<p>%s (%s) expires in %s days.</p>" % (row[0], row[1], row[2])
+            html_msg += "<p>%s (%s) expires in %s days.</p>" % (row[0], row[1], row[2].days)
     if len(orange_warning_reservations):
         html_msg+="<h3>Warning the following will expire within %s days!</h3>" % orange_warning_days
         for row in orange_warning_reservations:
-            html_msg += "<p>%s (%s) expires in %s days.</p>" % (row[0], row[1], row[2])
+            html_msg += "<p>%s (%s) expires in %s days.</p>" % (row[0], row[1], row[2].days)
     if len(expired_warning_reservations):
         html_msg+="<h3>The following have expired in the last 10 days.</h3>"
         for row in expired_warning_reservations:
-            html_msg += "<p>%s (%s) expired %s days ago</p>" % (row[0], row[1], abs(row[2]))    
+            html_msg += "<p>%s (%s) expired %s days ago</p>" % (row[0], row[1], abs(row[2].days))    
             
     html_msg += "<h4>All Reservations</h4>"
     html_msg += list_to_html_table(report_list)
