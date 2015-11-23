@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import ConfigParser,  StringIO, logging, Queue, sys, threading, pprint
+import ConfigParser,  StringIO, logging, Queue, sys, threading
 import boto3, botocore.exceptions
 import datetime, time
 from dateutil.tz import tzlocal, tzutc
@@ -99,7 +99,6 @@ def dates_to_keep(dates = None, retention_limits=None, now_time=datetime.datetim
                 pass
         
     returning_dates = [date for date in date_selection if date_selection[date] is True]
-    
     return returning_dates
 
 
@@ -318,8 +317,11 @@ def process_volume_id(policy='Unknown', aws_region=None, volume_id=None, retenti
                 logging.warning('%s: %s:%s deleted: %s - %s' % (policy, aws_region, volume_id, snapshot, response))
             except botocore.exceptions.ClientError as e:
                 logging.error(e)
-    
 
+
+# process_policy
+#
+# A threaded function to allow all policies to be processed in parallel.
 @threaded 
 def process_policy(policy = None, cp=None):
 
@@ -339,11 +341,7 @@ def process_policy(policy = None, cp=None):
                 return False   
             ec2_client = boto3.client('ec2', region_name=aws_region)
         
-            retention_limits = {'most_recent':5,
-                                'days':7,
-                                'weeks':4,
-                                'months':2
-                               }
+            retention_limits = {'most_recent':5, 'days':7, 'weeks':4, 'months':2 }
     
             #Get retention limits
             for limit in retention_limits:
@@ -360,7 +358,6 @@ def process_policy(policy = None, cp=None):
                     volume_ids = []
                 else:
                     volume_ids = volume_ids.split()
-                
             except ConfigParser.NoOptionError as e:
                 logging.info('%s has not declared a volume section.' % policy)
                 
@@ -383,30 +380,26 @@ def process_policy(policy = None, cp=None):
                         name = [tag for tag in instance[u'Tags'] if tag['Key'] == 'Name'][0]['Value']
                         logging.info('%s: Found instance %s with name %s.' % (policy, instance[u'InstanceId'], name))
                         instance_ids.append(instance[u'InstanceId'])
-                
             except ConfigParser.NoOptionError as e:
                 logging.info('%s has not declared any instances by name.' % policy)            
-            
-            
-            
+
             try:
                 instances_by_id = cp.get(policy, 'instance_ids')
                 if instances_by_id == 'None':
                     instances_by_id = []
                 else: 
                     instance_ids.extend(instances_by_id.split())
-                
             except ConfigParser.NoOptionError as e:
                 logging.info('%s has not declared any instance by id.' % policy)
                 
-            
             instance_ids = list(set(instance_ids))
-            
             for instance_id in instance_ids:
                 process_instance_id(policy=policy, aws_region=aws_region, instance_id=instance_id, retention_limits=retention_limits, ec2_client=ec2_client)
 
                 
-    
+# lambda_handler
+#
+# Function to be provided to lambda configuration, if this file is uploaded as a ZIP file, use photographer.lambda_handler as the function name
 def lambda_handler(event, context):
 
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging_level)  
