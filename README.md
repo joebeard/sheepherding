@@ -11,6 +11,6 @@ All of the scripts in the scripts directory are intended to be installed in a ve
 * Create an IAM role with a policy that allows access to the components used in the script, example policys are provided in the iam_policy_examples directory.
 * Create a scheduled event to initiate the lambda function as frequently as required, "cron(0 0 ? * 1 *)" will run it weekly at midnight on Sunday for example.
 * Either:
-** Copy and paste the script into the code section, updating any of the customisations defined at the beginning of the handler function (which is always lambda_function.lambda_handler)
-** Zip and upload the .py file and specify the handler as file_name.lambda_handler
+  * Copy and paste the script into the code section, updating any of the customisations defined at the beginning of the handler function (which is always lambda_function.lambda_handler)
+  * Zip and upload the .py file and specify the handler as file_name.lambda_handler
 * Some of the scripts take longer to run than others and will require more ram, so you may need to increase the limits if you have a very large infrastructure.
