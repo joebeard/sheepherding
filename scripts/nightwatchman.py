@@ -43,11 +43,24 @@ def threaded(fn):
     return wrapper
 
 
-def load_config(bucket=None, key=None):
+# load_config
+#
+# take a text file held in an S3 Bucket and load it into a ConfigParser object.
+def s3_load_config(bucket=None, key=None):
     if bucket is None or key is None:
         raise AttributeError('Boom')
-    client = boto3.client('s3')    
-    r = client.get_object(Bucket=bucket,Key=key)
+        
+    
+    try:
+        client = boto3.client('s3')
+        r = client.get_object(Bucket=bucket,Key=key)
+    except botocore.exceptions.ClientError as e: 
+        client = boto3.client('s3')
+        location = client.get_bucket_location(Bucket=bucket)[u'LocationConstraint']
+        session = boto3.session.Session(region_name=location)
+        client = session.client('s3', config= boto3.session.Config(signature_version='s3v4'))
+        r = client.get_object(Bucket=bucket,Key=key)
+
     s = ''
     chunk = r[u'Body'].read(1024*8)
     while chunk:
@@ -56,6 +69,7 @@ def load_config(bucket=None, key=None):
     configparser = ConfigParser.ConfigParser()
     configparser.readfp(StringIO.StringIO(s))
     return configparser
+
 
 
 @threaded
@@ -70,7 +84,7 @@ def lambda_handler(event, context):
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging_level)  
     
     #load configu file from S3
-    cp = load_config(s3_bucket, s3_file)
+    cp = s3_load_config(s3_bucket, s3_file)
     
     global_search_tags =  [tuple(x.split(":")) for x in cp.get('general','search_tags').split()]
     
